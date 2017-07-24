@@ -123,7 +123,7 @@ public class App extends JFrame {
 		Set(balanceNode, new String[] {"environment", "merchant", "id", "id" }, mid);
 		Set(balanceNode, new String[] {"environment", "pointOfInteraction", "components", "[0]", "id", "id" }, tid);
 		Set(balanceNode, new String[] {"environment", "components", "[0]", "id", "id" }, tid);
-		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSS00 XXX");
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSS000 XXX");
 		String now = sdf.format(new Date());
 		Set(balanceNode, new String[] {"creationDateTime" }, now);
 		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionIdentification", "transactionDateTime" }, now);
