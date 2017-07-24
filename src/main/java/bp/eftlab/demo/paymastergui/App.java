@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -33,7 +34,7 @@ public class App extends JFrame {
 	private static final long serialVersionUID = -3561241504107993042L;
 	private JComboBox<String> terminal_;
 	private JComboBox<String> bill_;
-	private JTextField scale_ = new JTextField("100");
+	private JTextField scale_ = new JTextField("2");
 	private JTextField value_ = new JTextField("2000");
 	private JTextArea request_ = new JTextArea();
 	private JTextArea response_ = new JTextArea();
@@ -71,7 +72,7 @@ public class App extends JFrame {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			ObjectNode balanceNode = mapper.readValue(BasicMessages.BALANCE_ENQUIRY, ObjectNode.class);
-			updateWithDateTimeEtc(balanceNode);
+			updateWithDateTimeEtc(balanceNode, false);
 			request_.setText(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(balanceNode));
 			exchangeRequest();
 		} catch (Exception e) {
@@ -81,8 +82,9 @@ public class App extends JFrame {
 	}
 
 	private void exchangeRequest() {
+		Socket messageExchange = null;
 		try {
-			Socket messageExchange = new Socket("localhost", 7987);
+			messageExchange = new Socket("localhost", 7987);
 			int lenBytes = 4;
 			int length[] = new int[lenBytes];
 			long len = request_.getText().length();
@@ -109,14 +111,29 @@ public class App extends JFrame {
 			int offset = 0;
 			while (offset != len)
 				offset += in.read(data, offset, (int) len - offset);
-			response_.setText(new String(data));
+			
+			String val = new String(data);
+			try {
+				ObjectMapper mapper = new ObjectMapper();
+				JsonNode balanceNode = mapper.readValue(val, JsonNode.class);
+				val = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(balanceNode);
+			} catch (Exception e) {
+				/* Not used */
+			}
+			response_.setText(val);
 		} catch (Exception e) {
 			response_.setText(e.getMessage());
 			e.printStackTrace();
+		} finally {
+			try {
+				messageExchange.close();
+			} catch (Exception e) {
+				/* Not used */
+			}
 		}
 	}
 
-	private void updateWithDateTimeEtc(ObjectNode balanceNode) {
+	private void updateWithDateTimeEtc(ObjectNode balanceNode, boolean scaleVal) {
 		String midtid = terminal_.getSelectedItem().toString();
 		String mid = midtid.substring(4, 19);
 		String tid = midtid.substring(24);
@@ -128,13 +145,26 @@ public class App extends JFrame {
 		Set(balanceNode, new String[] {"creationDateTime" }, now);
 		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionIdentification", "transactionDateTime" }, now);
 		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionIdentification", "transactionReference" }, String.valueOf(new Date().getTime()));
+		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionDetails", "products", "[0]", "productCode" }, bill_.getSelectedItem().toString());
+		if (!scaleVal)
+			return;
+		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionDetails", "totalAmount", "scale" }, Long.parseLong(scale_.getText()));
+		Set(balanceNode, new String[] {"transactionRequestDetails", "transactionDetails", "totalAmount", "value" }, Long.parseLong(value_.getText()));
 	}
 
 	private void Set(JsonNode node, String[] path, String data) {
+		Set(node, path, new TextNode(data));
+	}
+	
+	private void Set(JsonNode node, String[] path, long data) {
+		Set(node, path, new LongNode(data));
+	}
+	
+	private void Set(JsonNode node, String[] path, JsonNode data) {
 		Set(node, path, 0, data);
 	}
 	
-	private void Set(JsonNode node, String[] path, int i, String data) {
+	private void Set(JsonNode node, String[] path, int i, JsonNode data) {
 		if (i >= path.length) {
 			return;
 		}
@@ -151,7 +181,7 @@ public class App extends JFrame {
 				return;
 			int ix = Integer.parseInt(path[i].substring(1, path[i].length() - 1));
 			if (i == path.length - 1) {
-				nodeObj.set(ix, new TextNode(data));
+				nodeObj.set(ix, data);
 			} else {
 				Set(nodeObj.get(ix), path, i+1, data);
 			}
@@ -167,7 +197,7 @@ public class App extends JFrame {
 			if (nodeObj == null)
 				return;	
 			if (i == path.length - 1) {
-				nodeObj.set(path[i], new TextNode(data));
+				nodeObj.set(path[i], data);
 			} else {
 				Set(nodeObj.get(path[i]), path, i+1, data);
 			}
@@ -202,6 +232,16 @@ public class App extends JFrame {
 			JOptionPane.showMessageDialog(this, "Invalid value, must be 0 or greater");
 			return;
 		}
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			ObjectNode balanceNode = mapper.readValue(BasicMessages.PROCESS_TXN, ObjectNode.class);
+			updateWithDateTimeEtc(balanceNode, true);
+			request_.setText(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(balanceNode));
+			exchangeRequest();
+		} catch (Exception e) {
+			request_.setText(e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	private void setupComponents() {
@@ -215,6 +255,8 @@ public class App extends JFrame {
 		}
 		terminal_ = new JComboBox<String>(midtid.toArray(new String[0]));
 		bill_ = new JComboBox<String>(bills.toArray(new String[0]));
+		terminal_.setSelectedIndex(50);
+		bill_.setSelectedIndex(50);
 	}
 
 	private void layoutFrame() {
