@@ -247,6 +247,8 @@ public class App extends JFrame {
 	private void setupComponents() {
 		ArrayList<String> midtid = new ArrayList<String>();
 		ArrayList<String> bills = new ArrayList<String>();
+		bills.add("ON_DEMAND_1");
+		bills.add("ON_DEMAND_2");
 		for (int i = 0; i < 100; ++i) {
 			midtid.add("MID_" + String.format("%15s", String.valueOf(i / 5)).replace(' ', '0') + "_TID_"
 					+ String.format("%8s", String.valueOf(i % 5)).replace(' ', '0'));
@@ -256,7 +258,7 @@ public class App extends JFrame {
 		terminal_ = new JComboBox<String>(midtid.toArray(new String[0]));
 		bill_ = new JComboBox<String>(bills.toArray(new String[0]));
 		terminal_.setSelectedIndex(50);
-		bill_.setSelectedIndex(50);
+		bill_.setSelectedIndex(52);
 	}
 
 	private void layoutFrame() {
